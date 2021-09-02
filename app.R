@@ -29,33 +29,70 @@ gene_cols <- names(data)[sapply(names(data), gene_candidate_f)]
 
 # UI -----
 ui <- fluidPage(
-    fluidRow(
-        column(width = 4,
-               h4("Specify which columns align with conditions"),
-               textInput("condition1_name",
-                         "Condition label",
-                         value = "control"),
-               uiOutput("condition1_selector"),
-               textInput("condition2_name",
-                         "Condition label",
-                         value = "treatment"),
-               uiOutput("condition2_selector"),
-               selectInput("de_package",
-                           "Select preferred differential analysis package:",
-                           choices = c("edgeR", "DESeq2", "limma/voom")),
-               br(),
-               actionButton("apply", "Apply")),
-        column(width = 8,
-               h4("Sample Table"),
-               dataTableOutput("sample_table"),
-               br(),
-               hr(),
-               h4("Differential Expression Results"),
-               em("Select replicates, name conditions, select desired analysis method, and click apply"),
-               br(),
-               dataTableOutput("deseq_res_table"))
-    ) # end fluidRow
-) # end fluidPage
+    # Use tabset panel
+    tabsetPanel(
+        # run analysis tab -----
+        tabPanel("Run Analysis",
+            sidebarLayout(
+                # tab 1 sidebar panel
+                sidebarPanel(
+                             br(),
+                             h4("Run Analysis"),
+                             textInput("condition1_name",
+                                       "Condition label",
+                                       value = "control"),
+                             uiOutput("condition1_selector"),
+                             textInput("condition2_name",
+                                       "Condition label",
+                                       value = "treatment"),
+                             uiOutput("condition2_selector"),
+                             selectInput("de_package",
+                                         "Select preferred differential analysis package:",
+                                         choices = c("edgeR", "DESeq2", "limma/voom")),
+                             actionButton("apply", "Apply")),
+                # tab 1 main panel
+                mainPanel(
+                    h4("Sample Table"),
+                    dataTableOutput("sample_table"))
+                ) # end sidebar layout
+            ), # end tabPanel 1
+        # view results tab -----
+        tabPanel("View Results",
+            sidebarLayout(
+                # tab 2 sidebar panel
+                sidebarPanel(
+                       h4("Filter Dataset"),
+                       sliderInput("pvalue_threshold",
+                                   "Set significance threshold",
+                                   min = 0,
+                                   max = 1,
+                                   value = 0,
+                                   step = .01),
+                       checkboxInput("fdr",
+                                     "Use False Discovery Rate",
+                                     TRUE),
+                       sliderInput("logfc_threshold",
+                                   "Set log fold change threshold",
+                                   min = 0,
+                                   max = 10,
+                                   value = 0,
+                                   step = .5),
+                       checkboxInput("fdr",
+                                     "Use adjusted P-value (False Discovery Rate)",
+                                     TRUE),
+                       checkboxInput("de_column",
+                                     "Show differentially expressed column",
+                                     FALSE),
+                       checkboxInput("de_filter",
+                                     "Filter table to only show differentially expressed genes",
+                                     FALSE)),
+                # tab 2 main panel
+                mainPanel(
+                    dataTableOutput("deseq_res_table"))
+                ) # end tab 2 sidebar layout
+        ) # end tabpanel 2
+        ) # end tabsetPanel
+    ) # end fluidPage
 
 # SERVER -----
 server <- function(input, output) {
@@ -101,9 +138,18 @@ server <- function(input, output) {
               gene_col = gene_col)
     })
     
+    de_res_table_filtered <- reactive({
+        showDiffEx(de_res = de_res_table(),
+                   pvalue_threshold = input$pvalue_threshold,
+                   logfc_threshold = input$logfc_threshold,
+                   fdr = input$fdr,
+                   de_column = input$de_column,
+                   de_filter = input$de_filter)
+    })
+    
     observeEvent(input$apply, {
         output$deseq_res_table <- renderDataTable(
-            de_res_table()
+            de_res_table_filtered()
         )
     })
 }
