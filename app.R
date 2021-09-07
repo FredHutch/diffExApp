@@ -1,8 +1,17 @@
 # SET UP -----
 # load libraries
 library(shiny)
+# save variables
+# data <- read.table("~/Documents/work/dataCore/shiny/diffEx/data/counts.csv", sep = ",", header = TRUE)
+# condition1_name <- "wt"
+# condition2_name <- "trt"
+# condition1_selected <- c("SRR1039508", "SRR1039509", "SRR1039512")
+# condition2_selected <- c("SRR1039521", "SRR1039520", "SRR1039517")
+# gene_col <- "gene"
+
 library(tidyverse)
 library(DESeq2)
+library(edgeR)
 library(DT)
 
 # source scripts
@@ -25,12 +34,13 @@ gene_candidate_f <- function(x) {
 }
 
 counts_cols <- names(data)[sapply(names(data), counts_candidate_f)]
-gene_cols <- names(data)[sapply(names(data), gene_candidate_f)]
+gene_col <- names(data)[sapply(names(data), gene_candidate_f)]
 
 # UI -----
 ui <- fluidPage(
     # Use tabset panel
     tabsetPanel(
+        
         # run analysis tab -----
         tabPanel("Run Analysis",
             sidebarLayout(
@@ -56,6 +66,7 @@ ui <- fluidPage(
                     dataTableOutput("sample_table"))
                 ) # end sidebar layout
             ), # end tabPanel 1
+        
         # view results tab -----
         tabPanel("View Results",
             sidebarLayout(
@@ -66,7 +77,7 @@ ui <- fluidPage(
                                    "Set significance threshold",
                                    min = 0,
                                    max = 1,
-                                   value = 0,
+                                   value = .05,
                                    step = .01),
                        checkboxInput("fdr",
                                      "Use False Discovery Rate",
@@ -75,7 +86,7 @@ ui <- fluidPage(
                                    "Set log fold change threshold",
                                    min = 0,
                                    max = 10,
-                                   value = 0,
+                                   value = 2,
                                    step = .5),
                        checkboxInput("fdr",
                                      "Use adjusted P-value (False Discovery Rate)",
@@ -85,10 +96,14 @@ ui <- fluidPage(
                                      FALSE),
                        checkboxInput("de_filter",
                                      "Filter table to only show differentially expressed genes",
-                                     FALSE)),
+                                     FALSE),
+                       br(),
+                       downloadButton("download_de_res",
+                                      "Download Results Table")),
                 # tab 2 main panel
                 mainPanel(
-                    dataTableOutput("deseq_res_table"))
+                    h4("Differential Expression Results Table"),
+                    dataTableOutput("de_res_table"))
                 ) # end tab 2 sidebar layout
         ) # end tabpanel 2
         ) # end tabsetPanel
@@ -115,7 +130,8 @@ server <- function(input, output) {
                     selectize= TRUE)
     })
     
-    # Deseq2 differential expression -----
+    # Differential expression -----
+    # create sample table
     reactive_sample_table <- reactive({
         createSampleMatrix(condition1_name = input$condition1_name,
                            condition2_name = input$condition2_name,
@@ -123,35 +139,53 @@ server <- function(input, output) {
                            condition2_selected = input$condition2_selected)
     })
     
+    # render sample table 
     output$sample_table <- renderDataTable(
         reactive_sample_table() %>%
             rownames_to_column(var = "sample") %>%
             select(sample, everything())
     )
     
-    de_res_table <- reactive({
-        deseq(data = data,
+    # run differential expression analysis
+    reactive_de_res <- reactive({
+        diffEx(data = data,
               condition1_name = input$condition1_name,
               condition2_name = input$condition2_name,
               condition1_selected = input$condition1_selected,
               condition2_selected = input$condition2_selected,
-              gene_col = gene_col)
+              gene_col = gene_col,
+              de_package = input$de_package)
     })
     
-    de_res_table_filtered <- reactive({
-        showDiffEx(de_res = de_res_table(),
-                   pvalue_threshold = input$pvalue_threshold,
-                   logfc_threshold = input$logfc_threshold,
-                   fdr = input$fdr,
-                   de_column = input$de_column,
-                   de_filter = input$de_filter)
+    # filter de results
+    de_res_formatted <- reactive({
+        formatResults(de_res = reactive_de_res(),
+                      pvalue_threshold = input$pvalue_threshold,
+                      logfc_threshold = input$logfc_threshold,
+                      fdr = input$fdr,
+                      de_column = input$de_column,
+                      de_filter = input$de_filter,
+                      de_package = input$de_package)
     })
     
+    # render data table of results on apply button click
+    # FIXME: maybe I should have the button run the analysis instead...?
     observeEvent(input$apply, {
-        output$deseq_res_table <- renderDataTable(
-            de_res_table_filtered()
+        output$de_res_table <- renderDataTable(
+            DT::datatable(de_res_formatted(), options = list(pageLength = 25))
         )
     })
+    
+    # download handler -----
+    
+    output$download_de_res <- downloadHandler(
+        filename = function() {
+            paste0("diffEx-", input$de_package, "-", Sys.Date(), ".csv")
+        },
+        
+        content = function(file) {
+            write.csv(de_res_formatted(), file)
+        })
 }
 
 # Run the application 
