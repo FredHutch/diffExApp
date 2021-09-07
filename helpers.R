@@ -1,14 +1,4 @@
-# create a sample matrix from input condition names and selected column names -----
-data <- read.table("~/Documents/work/dataCore/shiny/diffEx/data/counts.csv", sep = ",", header = TRUE)
-condition1_name <- "wt"
-condition2_name <- "trt"
-condition1_selected <- c("SRR1039508", "SRR1039509", "SRR1039512")
-condition2_selected <- c("SRR1039521", "SRR1039520", "SRR1039517")
-gene_col <- "gene"
-
-###################
-## DESEQ HELPERS ##
-###################
+## GENERIC DE HELPERS #############################################################################
 # create a sample matrix from selected column names and supplied naming info
 createSampleMatrix <- function(condition1_name,
                                condition2_name,
@@ -35,7 +25,7 @@ prepDataset <- function(data,
                         gene_col) {
   # make gene_col row names of data
   data <- column_to_rownames(data, gene_col)
-
+  
   # check that all samples in sample_matrix are in colnames of data
   if (!all(row.names(sample_matrix) %in% colnames(data))) {
     # if they aren't all present, error out
@@ -57,6 +47,7 @@ prepDataset <- function(data,
   return(data)
 }
 
+## DESEQ DE #######################################################################################
 # run deseq de analysis
 # output deseq dataset object
 deseqDE <- function(data,
@@ -68,45 +59,138 @@ deseqDE <- function(data,
   
   # filter out low counts
   dds <- estimateSizeFactors(dds)
-  idx <- rowSums( counts(dds, normalized=TRUE) >= 5 ) >= 3
+  idx <- rowSums(counts(dds, normalized=TRUE) >= 5) >= 3
   dds <- dds[idx]
   
   # run deseq analysis
   deseq <- DESeq(dds)
   
+  # get results
+  de_res <- data.frame(results(deseq))
+  
+  return(de_res)
+  
   return(deseq)
 }
 
-###################
-## MAIN FUNCTION ##
-###################
-
-deseq <- function(data,
-                  condition1_name,
-                  condition2_name,
-                  condition1_selected,
-                  condition2_selected,
-                  gene_col) {
+## EDGER DE #######################################################################################
+edgerDE <- function(data,
+                    sample_matrix) {
+  # create dgelist
+  dge <- DGEList(counts = data, group = sample_matrix$condition)
   
-  # Create the sample matrix
+  # filter out genes with low normalized counts
+  # keeping metrics same as deseq (at least three columns > 5)
+  idx <- rowSums(cpm(dge) >= 5) >= 3
+  dge$counts <- dge$counts[idx, ]
+  
+  # recalculate library size after filtering low counts
+  dge$samples$lib.size <- colSums(dge$counts)
+  
+  # TMM normalization is applied to this dataset to account for compositional difference between
+  dge <- calcNormFactors(dge)
+  
+  # Before we fit negative binomial GLMs, we need to define our design matrix based on the experimental design
+  condition <- sample_matrix$condition
+  design <- model.matrix(~condition)
+  rownames(design) <- rownames(sample_matrix)
+  
+  # estimate the NB dispersion
+  dge <- estimateDisp(dge, design, robust=TRUE)
+  
+  # Determine differentially expressed genes
+  # Fit genewise glms
+  fit <- glmFit(dge, design)
+  
+  # Conduct likelihood ratio test
+  lrt <- glmLRT(fit)
+  
+  # pull out full results table (inf = show all)
+  de_res <- data.frame(topTags(lrt, n = Inf))
+  
+  return(de_res)
+}
+
+## MAIN DE FUNCTION ###############################################################################
+diffEx <- function(data,
+                   condition1_name,
+                   condition2_name,
+                   condition1_selected,
+                   condition2_selected,
+                   gene_col,
+                   de_package) {
+  
+  # create sample matrix
   sample_matrix <- createSampleMatrix(condition1_name,
                                       condition2_name,
                                       condition1_selected,
-                                      condition2_selected)
-  
-  # prep data so that it matches sample_matrix
+                                      condition2_selected) 
+  # prep dataset
   prepped_data <- prepDataset(data,
                               sample_matrix,
                               gene_col)
   
-  # run deseq analysis
-  # output is deseq data obj
-  de_out <- deseqDE(prepped_data,
-                    sample_matrix)
-  
-  # get results from de_out
-  de_res <- data.frame(results(de_out))
+  # run de analysis
+  if (de_package == "DESeq2") {
+    de_res <- deseqDE(prepped_data, sample_matrix)
+  } else {
+    de_res <- edgerDE(prepped_data, sample_matrix)
+  }
   
   return(de_res)
+}
+
+## FILTER / FORMAT RESULTS ########################################################################
+# 
+# filterDE <- function(results,
+#                      pvalue_threshold,
+#                      pvalue_column,
+#                      logfc_threshold,
+#                      logfc_column) {
+#   
+# }
+
+
+# filter differential expression output based on a set pvalue and logfc threshold
+formatResults <- function(de_res,
+                          pvalue_threshold,
+                          logfc_threshold,
+                          fdr,
+                          de_column,
+                          de_filter,
+                          de_package) {
   
+  # FIXME: Need a more elegant way to do this
+  # based on which method is selected
+  # create index of de genes
+  # if fdr = TRUE use padj
+  if (de_package == "DESeq2") {
+    if (fdr) {
+      de_idx <- abs(de_res$log2FoldChange) >= logfc_threshold & de_res$padj <= pvalue_threshold
+    } else {
+      de_idx <- abs(de_res$log2FoldChange) >= logfc_threshold & de_res$pvalue <= pvalue_threshold
+    }
+  } else {
+    if (fdr) {
+      de_idx <- abs(de_res$logFC) >= logfc_threshold & de_res$FDR <= pvalue_threshold
+    } else {
+      de_idx <- abs(de_res$logFC) >= logfc_threshold & de_res$PValue <= pvalue_threshold
+    }
+  }
+  # DESEQ for some reasons turns pval/padj to NA, this messes up the de_idx (NA instead of T/F)
+  # https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#pvaluesNA
+  # change NA to FALSE in de_idx so these cases are dropped
+  de_idx[is.na(de_idx)] = FALSE
+  
+  # if de_column is TRUE, add index to output
+  if (de_column) {
+    de_res$isDE <- de_idx
+  }
+  
+  # if de_filter is TRUE, filter dataset
+  if (de_filter) {
+    de_res <- de_res[de_idx, ]
+  }
+  
+  return(de_res)
 }
