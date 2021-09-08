@@ -1,6 +1,3 @@
-# SET UP -----
-# load libraries
-library(shiny)
 # save variables
 # data <- read.table("~/Documents/work/dataCore/shiny/diffEx/data/counts.csv", sep = ",", header = TRUE)
 # condition1_name <- "wt"
@@ -9,13 +6,18 @@ library(shiny)
 # condition2_selected <- c("SRR1039521", "SRR1039520", "SRR1039517")
 # gene_col <- "gene"
 
-library(tidyverse)
+# SET UP -----
+# load libraries
+library(shiny)
 library(DESeq2)
 library(edgeR)
+library(tidyverse)
 library(DT)
+library(scales)
 
 # source scripts
-source("./helpers.R")
+source("./diffEx.R")
+source("./plot.R")
 
 # read in data
 data <- read.table("~/Documents/work/dataCore/shiny/diffEx/data/counts.csv", sep = ",", header = TRUE)
@@ -58,7 +60,7 @@ ui <- fluidPage(
                              uiOutput("condition2_selector"),
                              selectInput("de_package",
                                          "Select preferred differential analysis package:",
-                                         choices = c("edgeR", "DESeq2", "limma/voom")),
+                                         choices = c("DESeq2", "edgeR")),
                              actionButton("apply", "Apply")),
                 # tab 1 main panel
                 mainPanel(
@@ -105,7 +107,14 @@ ui <- fluidPage(
                     h4("Differential Expression Results Table"),
                     dataTableOutput("de_res_table"))
                 ) # end tab 2 sidebar layout
-        ) # end tabpanel 2
+        ), # end tabpanel 2
+        tabPanel("MA Plot",
+                 fluidRow(
+                     column(width = 12,
+                            align = "center",
+                            plotOutput("ma_plot"))
+                 )
+                 )
         ) # end tabsetPanel
     ) # end fluidPage
 
@@ -175,6 +184,19 @@ server <- function(input, output) {
             DT::datatable(de_res_formatted(), options = list(pageLength = 25))
         )
     })
+    
+    # ma plot -----
+    reactive_ma <- reactive({
+        resultsToMa(results = reactive_de_res(),
+                    de_package = input$de_package,
+                    pvalue_threshold = input$pvalue_threshold,
+                    logfc_threshold = input$logfc_threshold,
+                    fdr = input$fdr)
+    })
+    
+    output$ma_plot <- renderPlot(
+        reactive_ma()
+    )
     
     # download handler -----
     
