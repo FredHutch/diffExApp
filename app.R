@@ -5,6 +5,10 @@
 # condition1_selected <- c("SRR1039508", "SRR1039509", "SRR1039512")
 # condition2_selected <- c("SRR1039521", "SRR1039520", "SRR1039517")
 # gene_col <- "gene"
+# de_package <- "DESeq2"
+# fdr <- TRUE
+# pvalue_threshold <- .01
+# logfc_threshold <- 2
 
 # SET UP -----
 # load libraries
@@ -108,11 +112,15 @@ ui <- fluidPage(
                     dataTableOutput("de_res_table"))
                 ) # end tab 2 sidebar layout
         ), # end tabpanel 2
-        tabPanel("MA Plot",
+        tabPanel("Plots",
                  fluidRow(
                      column(width = 12,
                             align = "center",
-                            plotOutput("ma_plot"))
+                            h4("MA Plot"),
+                            plotOutput("ma_plot"),
+                            br(),
+                            h4("Volcano Plot"),
+                            plotOutput("volcano_plot"))
                  )
                  )
         ) # end tabsetPanel
@@ -196,6 +204,19 @@ server <- function(input, output) {
     
     output$ma_plot <- renderPlot(
         reactive_ma()
+    )
+    
+    # volcano plot -----
+    reactive_volcano <- reactive({
+        resultsToVolcano(result = reactive_de_res(),
+                         de_package = input$de_package,
+                         pvalue_threshold = input$pvalue_threshold,
+                         logfc_threshold = input$logfc_threshold,
+                         fdr = input$fdr)
+    })
+    
+    output$volcano_plot <- renderPlot(
+        reactive_volcano()
     )
     
     # download handler -----
