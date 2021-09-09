@@ -105,7 +105,10 @@ ui <- fluidPage(
                                      FALSE),
                        br(),
                        downloadButton("download_de_res",
-                                      "Download Results Table")),
+                                      "Download Results Table"),
+                       br(),
+                       br(),
+                       em("Results table will download exactly as it is displayed")),
                 # tab 2 main panel
                 mainPanel(
                     h4("Differential Expression Results Table"),
