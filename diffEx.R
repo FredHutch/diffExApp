@@ -141,16 +141,6 @@ diffEx <- function(data,
 }
 
 ## FILTER / FORMAT RESULTS ########################################################################
-# 
-# filterDE <- function(results,
-#                      pvalue_threshold,
-#                      pvalue_column,
-#                      logfc_threshold,
-#                      logfc_column) {
-#   
-# }
-
-
 # filter differential expression output based on a set pvalue and logfc threshold
 formatResults <- function(de_res,
                           pvalue_threshold,
