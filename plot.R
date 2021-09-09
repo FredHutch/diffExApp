@@ -1,6 +1,9 @@
+## QC VISUALIZATIONS ##############################################################################
+# PCA of samples
+
+
+## RESULTS VISUALIZATIONS #########################################################################
 # plot de output in MA plot
-# basemean on x axis
-# log2foldchange on y axis
 resultsToMa <- function(results,
                         de_package,
                         pvalue_threshold,
@@ -44,7 +47,6 @@ resultsToMa <- function(results,
 }
 
 # plot de results as volcano plot
-
 resultsToVolcano <- function(results,
                              de_package,
                              pvalue_threshold,
@@ -73,7 +75,7 @@ resultsToVolcano <- function(results,
 
   # build base of plot
   volcano <- ggplot(results, aes(x = .data[[logfc_col]], y = log_pval)) +
-    geom_point(sizwe = 2, alpha = .6, aes(color = de_idx)) +
+    geom_point(size = 2, alpha = .6, aes(color = de_idx)) +
     geom_hline(yintercept = -log10(pvalue_threshold), linetype = "dashed", col = "grey", size = 1) +
     geom_vline(xintercept = c(logfc_threshold, -logfc_threshold), linetype = "dashed", col = "grey", size = 1) +
     scale_y_continuous(limits=c(0, 10), oob = squish) +
