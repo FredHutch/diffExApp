@@ -65,11 +65,6 @@ deseqDE <- function(data,
   # run deseq analysis
   deseq <- DESeq(dds)
   
-  # get results
-  de_res <- data.frame(results(deseq))
-  
-  return(de_res)
-  
   return(deseq)
 }
 
@@ -105,10 +100,10 @@ edgerDE <- function(data,
   # Conduct likelihood ratio test
   lrt <- glmLRT(fit)
   
-  # pull out full results table (inf = show all)
-  de_res <- data.frame(topTags(lrt, n = Inf))
+  # include norm counts in output
+  lrt$normalizedCounts <- cpm(dge$counts)
   
-  return(de_res)
+  return(lrt)
 }
 
 ## MAIN DE FUNCTION ###############################################################################
@@ -132,24 +127,29 @@ diffEx <- function(data,
   
   # run de analysis
   if (de_package == "DESeq2") {
-    de_res <- deseqDE(prepped_data, sample_matrix)
+    de_out <- deseqDE(prepped_data, sample_matrix)
   } else {
-    de_res <- edgerDE(prepped_data, sample_matrix)
+    de_out <- edgerDE(prepped_data, sample_matrix)
   }
   
-  return(de_res)
+  return(de_out)
 }
 
 ## FILTER / FORMAT RESULTS ########################################################################
 # filter differential expression output based on a set pvalue and logfc threshold
-formatResults <- function(de_res,
+formatResults <- function(de_out,
                           pvalue_threshold,
                           logfc_threshold,
                           fdr,
                           de_column,
                           de_filter,
                           de_package) {
-  
+  # get results from de output
+  if (de_package == "DESeq2") {
+    de_res <- data.frame(results(de_out))
+  } else if (de_package == "edgeR") {
+    de_res <- data.frame(topTags(de_out, n = Inf))
+  }
   # FIXME: Need a more elegant way to do this
   # based on which method is selected
   # create index of de genes

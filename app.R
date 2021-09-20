@@ -69,7 +69,11 @@ ui <- fluidPage(
                 # tab 1 main panel
                 mainPanel(
                     h4("Sample Table"),
-                    dataTableOutput("sample_table"))
+                    dataTableOutput("sample_table"),
+                    hr(),
+                    br(),
+                    plotOutput("sample_pca")
+                    )
                 ) # end sidebar layout
             ), # end tabPanel 1
         
@@ -115,17 +119,18 @@ ui <- fluidPage(
                     dataTableOutput("de_res_table"))
                 ) # end tab 2 sidebar layout
         ), # end tabpanel 2
-        tabPanel("Plots",
+        tabPanel("MA Plot",
                  fluidRow(
                      column(width = 12,
                             align = "center",
-                            h4("MA Plot"),
-                            plotOutput("ma_plot"),
-                            br(),
-                            h4("Volcano Plot"),
-                            plotOutput("volcano_plot"))
-                 )
-                 )
+                            plotOutput("ma_plot")))
+                 ), # end tab 3
+        tabPanel("Volcano Plot",
+                 fluidRow(
+                     column(width = 12,
+                            align = "center",
+                            plotOutput("volcano_plot")))
+        ) # end tab 4
         ) # end tabsetPanel
     ) # end fluidPage
 
@@ -167,19 +172,26 @@ server <- function(input, output) {
     )
     
     # run differential expression analysis
-    reactive_de_res <- reactive({
+    reactive_de_out <- reactive({
         diffEx(data = data,
-              condition1_name = input$condition1_name,
-              condition2_name = input$condition2_name,
-              condition1_selected = input$condition1_selected,
-              condition2_selected = input$condition2_selected,
-              gene_col = gene_col,
-              de_package = input$de_package)
+               condition1_name = input$condition1_name,
+               condition2_name = input$condition2_name,
+               condition1_selected = input$condition1_selected,
+               condition2_selected = input$condition2_selected,
+               gene_col = gene_col,
+               de_package = input$de_package)
+    })
+    
+    # plot pca
+    output$sample_pca <- renderPlot({
+        countsToPca(de_out = reactive_de_out(),
+                    sample_matrix = reactive_sample_table(),
+                    de_package = input$de_package)
     })
     
     # filter de results
     de_res_formatted <- reactive({
-        formatResults(de_res = reactive_de_res(),
+        formatResults(de_out = reactive_de_out(),
                       pvalue_threshold = input$pvalue_threshold,
                       logfc_threshold = input$logfc_threshold,
                       fdr = input$fdr,
@@ -198,7 +210,7 @@ server <- function(input, output) {
     
     # ma plot -----
     reactive_ma <- reactive({
-        resultsToMa(results = reactive_de_res(),
+        resultsToMa(de_out = reactive_de_out(),
                     de_package = input$de_package,
                     pvalue_threshold = input$pvalue_threshold,
                     logfc_threshold = input$logfc_threshold,
@@ -211,7 +223,7 @@ server <- function(input, output) {
     
     # volcano plot -----
     reactive_volcano <- reactive({
-        resultsToVolcano(result = reactive_de_res(),
+        resultsToVolcano(de_out = reactive_de_out(),
                          de_package = input$de_package,
                          pvalue_threshold = input$pvalue_threshold,
                          logfc_threshold = input$logfc_threshold,
