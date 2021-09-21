@@ -123,13 +123,17 @@ ui <- fluidPage(
                  fluidRow(
                      column(width = 12,
                             align = "center",
-                            plotOutput("ma_plot")))
+                            plotOutput("ma_plot"),
+                            downloadButton("download_ma",
+                                           "Download MA Plot")))
                  ), # end tab 3
         tabPanel("Volcano Plot",
                  fluidRow(
                      column(width = 12,
                             align = "center",
-                            plotOutput("volcano_plot")))
+                            plotOutput("volcano_plot"),
+                            downloadButton("download_volcano",
+                                           "Download Volcano Plot")))
         ) # end tab 4
         ) # end tabsetPanel
     ) # end fluidPage
@@ -234,15 +238,33 @@ server <- function(input, output) {
         reactive_volcano()
     )
     
-    # download handler -----
+    # downloads -----
     
     output$download_de_res <- downloadHandler(
         filename = function() {
-            paste0("diffEx-", input$de_package, "-", Sys.Date(), ".csv")
+            paste0("diffEx-", input$de_package, "-results-", Sys.Date(), ".csv")
         },
         
         content = function(file) {
             write.csv(de_res_formatted(), file)
+        })
+    
+    output$download_ma <- downloadHandler(
+        filename = function() {
+            paste0("diffEx-", input$de_package, "-ma-plot-", Sys.Date(), ".csv")
+        },
+        
+        content = function(file) {
+            ggsave(file, reactive_ma(), device = "pdf", width = 10, height = 5, units = "in")
+        })
+    
+    output$download_volcano <- downloadHandler(
+        filename = function() {
+            paste0("diffEx-", input$de_package, "-volcano-", Sys.Date(), ".csv")
+        },
+        
+        content = function(file) {
+            ggsave(file, reactive_volcano(), device = "pdf", width = 10, height = 5, units = "in")
         })
 }
 
