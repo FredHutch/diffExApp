@@ -137,50 +137,54 @@ diffEx <- function(data,
 
 ## FILTER / FORMAT RESULTS ########################################################################
 # filter differential expression output based on a set pvalue and logfc threshold
-formatResults <- function(de_out,
-                          pvalue_threshold,
-                          logfc_threshold,
-                          fdr,
-                          de_column,
-                          de_filter,
-                          de_package) {
+getResults <- function(de_out,
+                       logfc_col,
+                       pvalue_col,
+                       fdr_col,
+                       logfc_threshold,
+                       pvalue_threshold,
+                       fdr,
+                       de_package) {
   # get results from de output
   if (de_package == "DESeq2") {
     de_res <- data.frame(results(de_out))
   } else if (de_package == "edgeR") {
     de_res <- data.frame(topTags(de_out, n = Inf))
   }
-  # FIXME: Need a more elegant way to do this
-  # based on which method is selected
+
   # create index of de genes
   # if fdr = TRUE use padj
-  if (de_package == "DESeq2") {
-    if (fdr) {
-      de_idx <- abs(de_res$log2FoldChange) >= logfc_threshold & de_res$padj <= pvalue_threshold
+  if (fdr) {
+    de_idx <- abs(de_res[[logfc_col]]) >= logfc_threshold & de_res[[pvalue_col]] <= pvalue_threshold
     } else {
-      de_idx <- abs(de_res$log2FoldChange) >= logfc_threshold & de_res$pvalue <= pvalue_threshold
-    }
-  } else {
-    if (fdr) {
-      de_idx <- abs(de_res$logFC) >= logfc_threshold & de_res$FDR <= pvalue_threshold
-    } else {
-      de_idx <- abs(de_res$logFC) >= logfc_threshold & de_res$PValue <= pvalue_threshold
-    }
-  }
+      de_idx <- abs(de_res[[logfc_col]]) >= logfc_threshold & de_res[[fdr_col]] <= pvalue_threshold
+      }
   # DESEQ for some reasons turns pval/padj to NA, this messes up the de_idx (NA instead of T/F)
   # https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#pvaluesNA
   # change NA to FALSE in de_idx so these cases are dropped
   de_idx[is.na(de_idx)] = FALSE
   
-  # if de_column is TRUE, add index to output
-  if (de_column) {
-    de_res$isDE <- de_idx
-  }
+  # save col in results
+  de_res$isDE <- de_idx
+  
+  return(de_res)
+}
+
+# format results based on user inputs
+formatResults <- function(de_res,
+                          de_column,
+                          de_filter) {
   
   # if de_filter is TRUE, filter dataset
   if (de_filter) {
-    de_res <- de_res[de_idx, ]
+    de_res <- de_res[de_res$isDE, ]
+  }
+  
+  # if de_column = FALSE, remove isDE column 
+  if (!de_column) {
+    de_res <- subset(de_res, select= -c(isDE))
   }
   
   return(de_res)
+  
 }
