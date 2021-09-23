@@ -31,17 +31,6 @@ resultsToMa <- function(de_out,
   } else if (de_package == "edgeR") {
     de_res <- data.frame(topTags(de_out, n = Inf))
   }
-  # handle differing results table naming schemes
-  if (de_package == "DESeq2") {
-    mean_counts_col <- "baseMean"
-    logfc_col <- "log2FoldChange"
-    pvalue_col <- ifelse(fdr, "padj", "pvalue")
-
-  } else if (de_package == "edgeR") {
-    mean_counts_col <- "logCPM"
-    logfc_col <- "logFC"
-    pvalue_col <- ifelse(fdr, "FDR", "PValue")
-  }
   
   # create boolean vector of significance
   de_idx <- abs(de_res[[logfc_col]]) >= logfc_threshold & de_res[[pvalue_col]] <= pvalue_threshold
@@ -67,48 +56,48 @@ resultsToMa <- function(de_out,
     theme_classic()
 }
 
-# plot de results as volcano plot
-resultsToVolcano <- function(de_out,
-                             de_package,
-                             pvalue_threshold,
-                             logfc_threshold,
-                             fdr) {
-  # pull results from de results object
-  if (de_package == "DESeq2") {
-    de_res <- data.frame(results(de_out))
-  } else if (de_package == "edgeR") {
-    de_res <- data.frame(topTags(de_out, n = Inf))
-  }
-  
-  # handle differing results table naming schemes
-  if (de_package == "DESeq2") {
-    logfc_col <- "log2FoldChange"
-    pvalue_col <- ifelse(fdr, "padj", "pvalue")
-    
-  } else if (de_package == "edgeR") {
-    logfc_col <- "logFC"
-    pvalue_col <- ifelse(fdr, "FDR", "PValue")
-  }
-  
-  # convert pval to -log10(pval)
-  de_res <- mutate(de_res,
-                 log_pval = -log10(de_res[[pvalue_col]]))
-  
-  de_idx <- abs(de_res[[logfc_col]]) >= logfc_threshold & de_res[[pvalue_col]] <= pvalue_threshold
-  # NA to FALSE
-  de_idx[is.na(de_idx)] = FALSE
-  # Reset levels so TRUE is first
-  de_idx <- factor(de_idx, levels = c(TRUE, FALSE))
-
-  # build base of plot
-  volcano <- ggplot(de_res, aes(x = .data[[logfc_col]], y = log_pval)) +
-    geom_point(size = 2, alpha = .6, aes(color = de_idx)) +
-    geom_hline(yintercept = -log10(pvalue_threshold), linetype = "dashed", col = "grey", size = 1) +
-    geom_vline(xintercept = c(logfc_threshold, -logfc_threshold), linetype = "dashed", col = "grey", size = 1) +
-    scale_y_continuous(limits=c(0, 10), oob = squish) +
-    labs(x = "Log Fold Change", y = "-log10(P value)", color = "Is DE") +
-    theme_classic(base_size = 12)
-  
-  volcano
-
-}
+# # plot de results as volcano plot
+# resultsToVolcano <- function(de_out,
+#                              de_package,
+#                              pvalue_threshold,
+#                              logfc_threshold,
+#                              fdr) {
+#   # pull results from de results object
+#   if (de_package == "DESeq2") {
+#     de_res <- data.frame(results(de_out))
+#   } else if (de_package == "edgeR") {
+#     de_res <- data.frame(topTags(de_out, n = Inf))
+#   }
+#   
+#   # handle differing results table naming schemes
+#   if (de_package == "DESeq2") {
+#     logfc_col <- "log2FoldChange"
+#     pvalue_col <- ifelse(fdr, "padj", "pvalue")
+#     
+#   } else if (de_package == "edgeR") {
+#     logfc_col <- "logFC"
+#     pvalue_col <- ifelse(fdr, "FDR", "PValue")
+#   }
+#   
+#   # convert pval to -log10(pval)
+#   de_res <- mutate(de_res,
+#                  log_pval = -log10(de_res[[pvalue_col]]))
+#   
+#   de_idx <- abs(de_res[[logfc_col]]) >= logfc_threshold & de_res[[pvalue_col]] <= pvalue_threshold
+#   # NA to FALSE
+#   de_idx[is.na(de_idx)] = FALSE
+#   # Reset levels so TRUE is first
+#   de_idx <- factor(de_idx, levels = c(TRUE, FALSE))
+# 
+#   # build plot
+#   volcano <- ggplot(de_res, aes(x = .data[[logfc_col]], y = log_pval)) +
+#     geom_point(size = 2, alpha = .6, aes(color = de_idx)) +
+#     geom_hline(yintercept = -log10(pvalue_threshold), linetype = "dashed", col = "grey", size = 1) +
+#     geom_vline(xintercept = c(logfc_threshold, -logfc_threshold), linetype = "dashed", col = "grey", size = 1) +
+#     scale_y_continuous(limits=c(0, 10), oob = squish) +
+#     labs(x = "Log Fold Change", y = "-log10(P value)", color = "Is DE") +
+#     theme_classic(base_size = 12)
+#   
+#   volcano
+# 
+# }
