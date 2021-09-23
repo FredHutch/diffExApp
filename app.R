@@ -18,10 +18,13 @@ library(edgeR)
 library(tidyverse)
 library(DT)
 library(scales)
+library(reactlog)
 
+reactlog_enable()
 # source scripts
 source("./diffEx.R")
 source("./plot.R")
+source("https://raw.githubusercontent.com/FredHutch/interactiveVolcano/master/volcano.R")
 
 # read in data
 data <- read.table("~/Documents/work/dataCore/shiny/diffEx/data/counts.csv", sep = ",", header = TRUE)
@@ -141,7 +144,15 @@ ui <- fluidPage(
 # SERVER -----
 server <- function(input, output) {
     
-    # select condition colnames -----
+    # reactive values of column names
+    # these are updated every time the action button 
+    # is clicked based on selected de_package
+    col_names <- reactiveValues(logfc_col = NULL, 
+                                pvalue_col = NULL,
+                                fdr_col = NULL,
+                                mean_counts_col = NULL)
+    
+    # select condition colnames to create sample matrix -----
     # condition 1
     output$condition1_selector <- renderUI({
         selectInput("condition1_selected",
@@ -159,7 +170,7 @@ server <- function(input, output) {
                     selectize= TRUE)
     })
     
-    # Differential expression -----
+    # Show selected sample table -----
     # create sample table
     reactive_sample_table <- reactive({
         createSampleMatrix(condition1_name = input$condition1_name,
@@ -175,8 +186,22 @@ server <- function(input, output) {
             select(sample, everything())
     )
     
-    # run differential expression analysis
-    reactive_de_out <- reactive({
+    # Differential expression analysis -----
+    # on click: 
+    # update stored column names based on de_package selected
+    # run differential expression
+    de_out <- eventReactive(input$apply, {
+        
+        if (input$de_package == "DESeq2") {
+            col_names$mean_counts_col <- "baseMean"
+            col_names$logfc_col <- "log2FoldChange"
+            col_names$pvalue_col <- ifelse(input$fdr == TRUE, "padj", "pvalue")
+        } else if (input$de_package == "edgeR") {
+            col_names$mean_counts_col <- "logCPM"
+            col_names$logfc_col <- "logFC"
+            col_names$pvalue_col <- ifelse(input$fdr == TRUE, "FDR", "PValue")
+        }
+        
         diffEx(data = data,
                condition1_name = input$condition1_name,
                condition2_name = input$condition2_name,
@@ -185,40 +210,52 @@ server <- function(input, output) {
                gene_col = gene_col,
                de_package = input$de_package)
     })
+
+    # get de results from de object
+    # this reactive element will go into plots 
+    de_res_table <- reactive({
+        getResults(de_out = de_out(),
+                   logfc_col = col_names$logfc_col,
+                   pvalue_col = col_names$pvalue_col,
+                   fdr_col = col_names$fdr_col,
+                   logfc_threshold = input$logfc_threshold,
+                   pvalue_threshold = input$pvalue_threshold,
+                   fdr = input$fdr,
+                   de_package = input$de_package)
+    })
     
+    # format results based on user inputs
+    formatted_res_table <- reactive({
+        formatResults(de_res = de_res_table(),
+                      de_column = input$de_column,
+                      de_filter = input$de_filter)
+    })
+    
+    
+    # render de_res_table()
+    output$de_res_table <- renderDataTable(
+        DT::datatable(formatted_res_table(), options = list(pageLength = 25))
+    )
+    
+    # plots -----
+    
+    # plot pca using counts from de_out
     # plot pca
     output$sample_pca <- renderPlot({
-        countsToPca(de_out = reactive_de_out(),
+        countsToPca(de_out = de_out(),
                     sample_matrix = reactive_sample_table(),
                     de_package = input$de_package)
     })
-    
-    # filter de results
-    de_res_formatted <- reactive({
-        formatResults(de_out = reactive_de_out(),
-                      pvalue_threshold = input$pvalue_threshold,
-                      logfc_threshold = input$logfc_threshold,
-                      fdr = input$fdr,
-                      de_column = input$de_column,
-                      de_filter = input$de_filter,
-                      de_package = input$de_package)
-    })
-    
-    # render data table of results on apply button click
-    # FIXME: maybe I should have the button run the analysis instead...?
-    observeEvent(input$apply, {
-        output$de_res_table <- renderDataTable(
-            DT::datatable(de_res_formatted(), options = list(pageLength = 25))
-        )
-    })
-    
+
     # ma plot -----
     reactive_ma <- reactive({
-        resultsToMa(de_out = reactive_de_out(),
-                    de_package = input$de_package,
-                    pvalue_threshold = input$pvalue_threshold,
-                    logfc_threshold = input$logfc_threshold,
-                    fdr = input$fdr)
+        resultsToMa(de_res = de_res_table(),
+                    logfc_col = col_names$logfc_col,
+                    mean_counts_col = col_names$mean_counts_col,
+                    x_label = "this is an x label",
+                    y_label = "this is a y label",
+                    legend_title = "legendddd",
+                    de_vec = de_res_table()$isDE)
     })
     
     output$ma_plot <- renderPlot(
@@ -227,11 +264,22 @@ server <- function(input, output) {
     
     # volcano plot -----
     reactive_volcano <- reactive({
-        resultsToVolcano(de_out = reactive_de_out(),
-                         de_package = input$de_package,
-                         pvalue_threshold = input$pvalue_threshold,
-                         logfc_threshold = input$logfc_threshold,
-                         fdr = input$fdr)
+        plotVolcano(data = de_res_table(),
+                    logfc_col = col_names$logfc_col,
+                    pvalue_col = col_names$pvalue_col,
+                    gene_col = NULL,
+                    pvalue_thresh = input$pvalue_threshold,
+                    logfc_thresh = input$logfc_threshold,
+                    color_by_de = TRUE,
+                    show_logfc_thresh = TRUE,
+                    show_pvalue_thresh = TRUE,
+                    highlight_genes = NULL,
+                    x_label = "x label here",
+                    y_label = "y label here",
+                    legend_title = "this is a legend",
+                    xlim = NULL,
+                    ylim = NULL,
+                    de_vec = de_res_table()$isDE)
     })
     
     output$volcano_plot <- renderPlot(
@@ -246,7 +294,7 @@ server <- function(input, output) {
         },
         
         content = function(file) {
-            write.csv(de_res_formatted(), file)
+            write.csv(de_res_formatted_table(), file)
         })
     
     output$download_ma <- downloadHandler(
@@ -269,4 +317,4 @@ server <- function(input, output) {
 }
 
 # Run the application 
-shinyApp(ui = ui, server = server)
+shinyApp(ui, server)
