@@ -31,18 +31,6 @@ resultsToMa <- function(de_res,
   # Reorder de_vec factors so that TRUE is first
   de_vec <- factor(de_vec, levels=c("TRUE", "FALSE"))
   
-  # create axes names
-  axes <- NULL
-  axes$y <- ifelse(y_label == "",
-                   logfc_col,
-                   y_label)
-  axes$x <- ifelse(x_label == "",
-                   mean_counts_col,
-                   x_label)
-  
-  axes$x <- ifelse(legend_title == "",
-                   "Differentially Expressed",
-                   legend_title)
   # base plot
   ma <- ggplot(de_res, aes(.data[[mean_counts_col]], .data[[logfc_col]])) +
     geom_point(size=2, alpha = .6, aes(colour = de_vec)) + 
@@ -62,7 +50,7 @@ resultsToMa <- function(de_res,
   
   # add custom axes and legend labels
   ma <- ma +
-    labs(x = axes$x, y = axes$y, color = legend_title) +
+    labs(x = x_label, y = y_label, color = legend_title) +
     theme_classic(base_size = 12)
   
   # display plot

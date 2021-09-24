@@ -123,20 +123,40 @@ ui <- fluidPage(
                 ) # end tab 2 sidebar layout
         ), # end tabpanel 2
         tabPanel("MA Plot",
-                 fluidRow(
-                     column(width = 12,
-                            align = "center",
-                            plotOutput("ma_plot"),
-                            downloadButton("download_ma",
-                                           "Download MA Plot")))
+                 sidebarLayout(
+                     sidebarPanel(
+                         h4("Customize Plot"),
+                         textInput("ma_x_label",
+                                   "X axis label:",
+                                   value = "Mean of normalized counts"),
+                         textInput("ma_y_label",
+                                   "Y axis label:",
+                                   value = "Log fold change"),
+                         textInput("ma_legend_title",
+                                   "Legend title:",
+                                   value = "Differentially expressed")),
+                     mainPanel(
+                         plotOutput("ma_plot"),
+                         downloadButton("download_ma",
+                                        "Download MA Plot")))
                  ), # end tab 3
         tabPanel("Volcano Plot",
-                 fluidRow(
-                     column(width = 12,
-                            align = "center",
-                            plotOutput("volcano_plot"),
-                            downloadButton("download_volcano",
-                                           "Download Volcano Plot")))
+                 sidebarLayout(
+                     sidebarPanel(
+                         h4("Customize Plot"),
+                         textInput("volcano_x_label",
+                                   "X axis label:",
+                                   value = "Log fold change"),
+                         textInput("volcano_y_label",
+                                   "Y axis label:",
+                                   value = "Significance (-log10)"),
+                         textInput("volcano_legend_title",
+                                   "Legend title:",
+                                   value = "Differentially expressed")),
+                     mainPanel(
+                         plotOutput("volcano_plot"),
+                         downloadButton("download_volcano",
+                                        "Download Volcano Plot")))
         ) # end tab 4
         ) # end tabsetPanel
     ) # end fluidPage
@@ -252,9 +272,9 @@ server <- function(input, output) {
         resultsToMa(de_res = de_res_table(),
                     logfc_col = col_names$logfc_col,
                     mean_counts_col = col_names$mean_counts_col,
-                    x_label = "this is an x label",
-                    y_label = "this is a y label",
-                    legend_title = "legendddd",
+                    x_label = input$ma_x_label,
+                    y_label = input$ma_y_label,
+                    legend_title = input$ma_legend_title,
                     de_vec = de_res_table()$isDE)
     })
     
@@ -274,9 +294,9 @@ server <- function(input, output) {
                     show_logfc_thresh = TRUE,
                     show_pvalue_thresh = TRUE,
                     highlight_genes = NULL,
-                    x_label = "x label here",
-                    y_label = "y label here",
-                    legend_title = "this is a legend",
+                    x_label = input$volcano_x_label,
+                    y_label = input$volcano_y_label,
+                    legend_title = input$volcano_legend_title,
                     xlim = NULL,
                     ylim = NULL,
                     de_vec = de_res_table()$isDE)
