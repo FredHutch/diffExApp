@@ -101,6 +101,7 @@ edgerDE <- function(data,
   lrt <- glmLRT(fit)
   
   # include norm counts in output
+  lrt$counts <- dge$counts
   lrt$normalizedCounts <- cpm(dge$counts)
   
   return(lrt)
@@ -135,15 +136,26 @@ diffEx <- function(data,
   return(de_out)
 }
 
-## FILTER / FORMAT RESULTS ########################################################################
+## FILTER / FORMAT DE_OUT #########################################################################
+# get counts based on user settings for de_package
+getCounts <- function(de_out,
+                      de_package,
+                      normalized = TRUE) {
+  if  (de_package == "DESeq2") {
+    counts <- counts(de_out, normalized = normalized)
+    } else if (de_package == "edgeR") {
+      if (normalized) {
+      counts <- de_out$normalizedCounts
+      } else {
+      counts <- de_out$counts
+      }}
+  
+  return(counts)
+}
+
+
 # filter differential expression output based on a set pvalue and logfc threshold
 getResults <- function(de_out,
-                       logfc_col,
-                       pvalue_col,
-                       fdr_col,
-                       logfc_threshold,
-                       pvalue_threshold,
-                       fdr,
                        de_package) {
   # get results from de output
   if (de_package == "DESeq2") {
@@ -151,14 +163,22 @@ getResults <- function(de_out,
   } else if (de_package == "edgeR") {
     de_res <- data.frame(topTags(de_out, n = Inf))
   }
+  
+  return(de_res)
+}
 
+# format results based on user inputs
+formatResults <- function(de_res,
+                          logfc_threshold,
+                          pvalue_threshold,
+                          logfc_col,
+                          pvalue_col,
+                          de_column,
+                          de_filter) {
+  
   # create index of de genes
-  # if fdr = TRUE use padj
-  if (fdr) {
-    de_idx <- abs(de_res[[logfc_col]]) >= logfc_threshold & de_res[[pvalue_col]] <= pvalue_threshold
-    } else {
-      de_idx <- abs(de_res[[logfc_col]]) >= logfc_threshold & de_res[[fdr_col]] <= pvalue_threshold
-      }
+  de_idx <- abs(de_res[[logfc_col]]) >= logfc_threshold & de_res[[pvalue_col]] <= pvalue_threshold
+
   # DESEQ for some reasons turns pval/padj to NA, this messes up the de_idx (NA instead of T/F)
   # https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#pvaluesNA
   # change NA to FALSE in de_idx so these cases are dropped
@@ -166,14 +186,6 @@ getResults <- function(de_out,
   
   # save col in results
   de_res$isDE <- de_idx
-  
-  return(de_res)
-}
-
-# format results based on user inputs
-formatResults <- function(de_res,
-                          de_column,
-                          de_filter) {
   
   # if de_filter is TRUE, filter dataset
   if (de_filter) {
