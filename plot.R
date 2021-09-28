@@ -1,21 +1,38 @@
 ## COUNTS TABLE VISUALIZATIONS ####################################################################
-countsToPca <- function(de_out,
-                        sample_matrix,
-                        de_package) {
-  # get counts from de_out
-  if (de_package == "DESeq2") {
-    counts <- counts(de_out, normalized = TRUE)
-  } else if (de_package == "edgeR") {
-  counts <- de_out$counts
-  }
+# plot PCA
+plotPca <- function(counts,
+                    sample_matrix) {
+  
+  # compute PCA on transposed counts
   pca <- prcomp(t(counts))
+  
+  # pull out info on PCs as dataframe
   pca_df <- data.frame(pca$x)
+  
+  # add col for annotations
   pca_df$condition <- as.character(sample_matrix$condition)
   
+  # plot
   ggplot(pca_df, aes(x = PC1, y = PC2, color = condition)) +
     geom_point() +
     ggrepel::geom_label_repel(aes(label = rownames(pca_df)), show.legend = FALSE) +
     theme_classic()
+}
+
+# plot heatmap
+plotHeatmap <- function(counts,
+                        sample_matrix,
+                        de_vec,
+                        silent = TRUE) {
+  # subset de genes only
+  de_counts <- counts[de_vec, ]
+  
+  # heatmap
+  pheatmap(de_counts, 
+           scale= "row", 
+           border_color = NA, 
+           annotation_col = sample_matrix,
+           silent = silent)
 }
 
 ## RESULTS VISUALIZATIONS #########################################################################
