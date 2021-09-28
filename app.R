@@ -18,9 +18,8 @@ library(edgeR)
 library(tidyverse)
 library(DT)
 library(scales)
-library(reactlog)
+library(pheatmap)
 
-reactlog_enable()
 # source scripts
 source("./diffEx.R")
 source("./plot.R")
@@ -72,7 +71,7 @@ ui <- fluidPage(
                 # tab 1 main panel
                 mainPanel(
                     h4("Sample Table"),
-                    dataTableOutput("sample_table"),
+                    dataTableOutput("sample_matrix"),
                     hr(),
                     br(),
                     plotOutput("sample_pca")
@@ -122,6 +121,8 @@ ui <- fluidPage(
                     dataTableOutput("de_res_table"))
                 ) # end tab 2 sidebar layout
         ), # end tabpanel 2
+        
+        # ma plot tab -----
         tabPanel("MA Plot",
                  sidebarLayout(
                      sidebarPanel(
@@ -140,6 +141,8 @@ ui <- fluidPage(
                          downloadButton("download_ma",
                                         "Download MA Plot")))
                  ), # end tab 3
+        
+        # volcano plot tab -----
         tabPanel("Volcano Plot",
                  sidebarLayout(
                      sidebarPanel(
@@ -157,23 +160,32 @@ ui <- fluidPage(
                          plotOutput("volcano_plot"),
                          downloadButton("download_volcano",
                                         "Download Volcano Plot")))
-        ) # end tab 4
+        ), # end tab 4
+        
+        # heatmap tab -----
+        tabPanel("Heatmap of DE Genes",
+                 sidebarLayout(
+                     sidebarPanel(),
+                     mainPanel(
+                         plotOutput("de_heatmap",
+                                    height = "2000px"),
+                         downloadButton("download_heatmap",
+                                        "Download Heatmap")
+                     )))
         ) # end tabsetPanel
     ) # end fluidPage
 
 # SERVER -----
-server <- function(input, output) {
+server <- function(input, output, session) {
     
-    # reactive values of column names
-    # these are updated every time the action button 
-    # is clicked based on selected de_package
+    # initialize reactive values -----
+    # these columns change based on de_package selected and if FDR = TRUE/FALSE
     col_names <- reactiveValues(logfc_col = NULL, 
                                 pvalue_col = NULL,
-                                fdr_col = NULL,
                                 mean_counts_col = NULL)
     
-    # select condition colnames to create sample matrix -----
-    # condition 1
+    # create sample matrix -----
+    # condition 1 selector
     output$condition1_selector <- renderUI({
         selectInput("condition1_selected",
                     "Select replicates: ",
@@ -181,7 +193,7 @@ server <- function(input, output) {
                     multiple = TRUE,
                     selectize= TRUE)
     })
-    # condition 2
+    # condition 2 selector
     output$condition2_selector <- renderUI({
         selectInput("condition2_selected",
                     "Select replicates: ",
@@ -190,24 +202,23 @@ server <- function(input, output) {
                     selectize= TRUE)
     })
     
-    # Show selected sample table -----
-    # create sample table
-    reactive_sample_table <- reactive({
+    # create sample table based on user selections
+    sample_matrix <- reactive({
         createSampleMatrix(condition1_name = input$condition1_name,
                            condition2_name = input$condition2_name,
                            condition1_selected = input$condition1_selected,
                            condition2_selected = input$condition2_selected)
     })
     
-    # render sample table 
-    output$sample_table <- renderDataTable(
-        reactive_sample_table() %>%
+    # render sample table
+    output$sample_matrix <- renderDataTable(
+        sample_matrix() %>%
             rownames_to_column(var = "sample") %>%
             select(sample, everything())
     )
     
-    # Differential expression analysis -----
-    # on click: 
+    # de analysis / update reactive values -----
+    # on click (apply) 
     # update stored column names based on de_package selected
     # run differential expression
     de_out <- eventReactive(input$apply, {
@@ -215,11 +226,9 @@ server <- function(input, output) {
         if (input$de_package == "DESeq2") {
             col_names$mean_counts_col <- "baseMean"
             col_names$logfc_col <- "log2FoldChange"
-            col_names$pvalue_col <- ifelse(input$fdr == TRUE, "padj", "pvalue")
         } else if (input$de_package == "edgeR") {
             col_names$mean_counts_col <- "logCPM"
             col_names$logfc_col <- "logFC"
-            col_names$pvalue_col <- ifelse(input$fdr == TRUE, "FDR", "PValue")
         }
         
         diffEx(data = data,
@@ -230,61 +239,104 @@ server <- function(input, output) {
                gene_col = gene_col,
                de_package = input$de_package)
     })
+    
+    # update reactive values (fdr) -----
+    # observe on checkbox click (fdr), colnames based on selected de_package 
+    observeEvent(input$fdr, {
+        if (input$de_package == "DESeq2") {
+            col_names$pvalue_col <- ifelse(input$fdr, "padj", "pvalue")
+        } else {
+            col_names$pvalue_col <- ifelse(input$fdr, "FDR", "PValue")
+        }
+    })
 
-    # get de results from de object
-    # this reactive element will go into plots 
-    de_res_table <- reactive({
+    # get de results -----
+    de_res <- reactive({
         getResults(de_out = de_out(),
-                   logfc_col = col_names$logfc_col,
-                   pvalue_col = col_names$pvalue_col,
-                   fdr_col = col_names$fdr_col,
-                   logfc_threshold = input$logfc_threshold,
-                   pvalue_threshold = input$pvalue_threshold,
-                   fdr = input$fdr,
                    de_package = input$de_package)
     })
     
-    # format results based on user inputs
-    formatted_res_table <- reactive({
-        formatResults(de_res = de_res_table(),
+    # get norm counts -----
+    counts <- reactive({
+        getCounts(de_out = de_out(),
+                  de_package = input$de_package,
+                  normalized = TRUE)
+    })
+    
+    # format results based on user inputs -----
+    # this is specifically for the downloadable results table
+    formatted_res_render <- reactive({
+        formatResults(de_res = req(de_res()),
+                      logfc_threshold = input$logfc_threshold,
+                      pvalue_threshold = input$pvalue_threshold,
+                      logfc_col = col_names$logfc_col,
+                      pvalue_col = col_names$pvalue_col,
                       de_column = input$de_column,
                       de_filter = input$de_filter)
     })
     
-    
-    # render de_res_table()
+    # render results table
+    # will re-render baesd on user selections
     output$de_res_table <- renderDataTable(
-        DT::datatable(formatted_res_table(), options = list(pageLength = 25))
+        DT::datatable(formatted_res_render(), options = list(pageLength = 50))
     )
     
-    # plots -----
+    # format results for plotting -----
+    # plots cannot use data that is filtered by user selection and require the de_column!
+    # FIXME: maybe there is a more streamlined way to do this?
+    formatted_res_plots <- reactive({
+        formatResults(de_res = req(de_res()),
+                      logfc_threshold = input$logfc_threshold,
+                      pvalue_threshold = input$pvalue_threshold,
+                      logfc_col = col_names$logfc_col,
+                      pvalue_col = col_names$pvalue_col,
+                      de_column = TRUE,
+                      de_filter = FALSE)
+    })
+
+    # pca plot -----    
+    # use counts from de_out
+    # plot on apply click
+    pca <-  eventReactive(input$apply, {
+       plotPca(counts = counts(),
+               sample_matrix = sample_matrix())
+    })
     
-    # plot pca using counts from de_out
-    # plot pca
+    # render pca
     output$sample_pca <- renderPlot({
-        countsToPca(de_out = de_out(),
-                    sample_matrix = reactive_sample_table(),
-                    de_package = input$de_package)
+        pca()
+    })
+    
+    # heatmap -----
+    heatmap <- reactive({
+        plotHeatmap(counts = counts(),
+                    sample_matrix = sample_matrix(),
+                    de_vec = formatted_res_plots()$isDE,
+                    silent = FALSE)
+    })
+    
+    output$de_heatmap <- renderPlot({
+        heatmap()
     })
 
     # ma plot -----
-    reactive_ma <- reactive({
-        resultsToMa(de_res = de_res_table(),
+    ma <- reactive({
+        resultsToMa(de_res = formatted_res_plots(),
                     logfc_col = col_names$logfc_col,
                     mean_counts_col = col_names$mean_counts_col,
                     x_label = input$ma_x_label,
                     y_label = input$ma_y_label,
                     legend_title = input$ma_legend_title,
-                    de_vec = de_res_table()$isDE)
+                    de_vec = formatted_res_plots()$isDE)
     })
     
     output$ma_plot <- renderPlot(
-        reactive_ma()
+        ma()
     )
     
     # volcano plot -----
-    reactive_volcano <- reactive({
-        plotVolcano(data = de_res_table(),
+    volcano <- reactive({
+        plotVolcano(data = formatted_res_plots(),
                     logfc_col = col_names$logfc_col,
                     pvalue_col = col_names$pvalue_col,
                     gene_col = NULL,
@@ -299,11 +351,11 @@ server <- function(input, output) {
                     legend_title = input$volcano_legend_title,
                     xlim = NULL,
                     ylim = NULL,
-                    de_vec = de_res_table()$isDE)
+                    de_vec = formatted_res_plots()$isDE)
     })
     
     output$volcano_plot <- renderPlot(
-        reactive_volcano()
+        volcano()
     )
     
     # downloads -----
@@ -323,7 +375,7 @@ server <- function(input, output) {
         },
         
         content = function(file) {
-            ggsave(file, reactive_ma(), device = "pdf", width = 10, height = 5, units = "in")
+            ggsave(file, ma(), device = "pdf", width = 10, height = 5, units = "in")
         })
     
     output$download_volcano <- downloadHandler(
@@ -332,7 +384,16 @@ server <- function(input, output) {
         },
         
         content = function(file) {
-            ggsave(file, reactive_volcano(), device = "pdf", width = 10, height = 5, units = "in")
+            ggsave(file, volcano(), device = "pdf", width = 10, height = 5, units = "in")
+        })
+    
+    output$download_heatmap <- downloadHandler(
+        filename = function() {
+            paste0("diffEx-", input$de_package, "-de-heatmap-", Sys.Date(), ".csv")
+        },
+        
+        content = function(file) {
+            ggsave(file, heatmap(), device = "pdf", width = 10, height = 5, units = "in")
         })
 }
 
