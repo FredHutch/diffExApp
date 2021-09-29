@@ -168,7 +168,7 @@ ui <- fluidPage(
                      sidebarPanel(),
                      mainPanel(
                          plotOutput("de_heatmap",
-                                    height = "2000px"),
+                                    height = "2500px"),
                          downloadButton("download_heatmap",
                                         "Download Heatmap")
                      )))
@@ -315,6 +315,12 @@ server <- function(input, output, session) {
                     silent = FALSE)
     })
     
+    # output$de_heatmap <- renderPlot({
+    #     heatmap()
+    # }, height = function() {
+    #     session$clientData$output_de_heatmap_width
+    # })
+    
     output$de_heatmap <- renderPlot({
         heatmap()
     })
@@ -371,7 +377,7 @@ server <- function(input, output, session) {
     
     output$download_ma <- downloadHandler(
         filename = function() {
-            paste0("diffEx-", input$de_package, "-ma-plot-", Sys.Date(), ".csv")
+            paste0("diffEx-", input$de_package, "-ma-plot-", Sys.Date(), ".pdf")
         },
         
         content = function(file) {
@@ -380,7 +386,7 @@ server <- function(input, output, session) {
     
     output$download_volcano <- downloadHandler(
         filename = function() {
-            paste0("diffEx-", input$de_package, "-volcano-", Sys.Date(), ".csv")
+            paste0("diffEx-", input$de_package, "-volcano-", Sys.Date(), ".pdf")
         },
         
         content = function(file) {
@@ -389,7 +395,7 @@ server <- function(input, output, session) {
     
     output$download_heatmap <- downloadHandler(
         filename = function() {
-            paste0("diffEx-", input$de_package, "-de-heatmap-", Sys.Date(), ".csv")
+            paste0("diffEx-", input$de_package, "-de-heatmap-", Sys.Date(), ".pdf")
         },
         
         content = function(file) {
