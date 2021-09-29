@@ -112,7 +112,7 @@ ui <- fluidPage(
                        br()),
                 # tab 2 main panel
                 mainPanel(tabsetPanel(
-                    # de results subtab -----
+                    # ...de results subtab -----
                     tabPanel("Differential Expression Results Table",
                              dataTableOutput("de_res_table"),
                              br(),
@@ -121,14 +121,62 @@ ui <- fluidPage(
                              br(),
                              br(),
                              em("Results table will download exactly as it is displayed")),
+                    # ...ma plot subtab -----
                     tabPanel("MA Plot",
-                             plotOutput("ma_plot"),
-                             downloadButton("download_ma",
-                                            "Download MA Plot")),
+                             fluidPage(
+                                 # plot
+                                 plotOutput("ma_plot"),
+                                 # customization
+                                 fluidRow(
+                                     column(12,
+                                            h4("Customize Plot"))),
+                                 fluidRow(
+                                     column(3,
+                                     textInput("ma_x_label",
+                                               "X axis label:",
+                                               value = "Mean of normalized counts"),
+                                     br(),
+                                     downloadButton("download_ma",
+                                                    "Download MA Plot")),
+                                 column(4,
+                                        offset = 1,
+                                        textInput("ma_y_label",
+                                                  "Y axis label:",
+                                                  value = "Log fold change")),
+                                 column(4,
+                                        textInput("ma_legend_title",
+                                                  "Legend title:",
+                                                  value = "Differentially expressed")))
+                                 
+                             )),
+                    # ...volcano plot subtab -----
                     tabPanel("Volcano Plot",
-                             plotOutput("volcano_plot"),
-                             downloadButton("download_volcano",
-                                            "Download Volcano Plot")),
+                             fluidPage(
+                                 # plot
+                                 plotOutput("volcano_plot"),
+                                 # customization
+                                 fluidRow(
+                                     column(12,
+                                            h4("Customize Plot"))),
+                                 fluidRow(
+                                     column(3,
+                                            textInput("volcano_x_label",
+                                                      "X axis label:",
+                                                      value = "Log fold change"),
+                                            br(),
+                                            downloadButton("download_volcano",
+                                                           "Download Volcano Plot")),
+                                     column(4,
+                                            offset = 1,
+                                            textInput("volcano_y_label",
+                                                      "Y axis label:",
+                                                      value = "Significance (-log10)")),
+                                     column(4,
+                                            textInput("volcano_legend_title",
+                                                      "Legend title:",
+                                                      value = "Differentially expressed")))
+                             )),
+                    # ...heatmap subtab -----
                     tabPanel("Heatmap of DE Genes",
                              plotOutput("de_heatmap",
                                         height = "2500px"),
