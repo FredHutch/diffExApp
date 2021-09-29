@@ -82,9 +82,9 @@ ui <- fluidPage(
         # view results tab -----
         tabPanel("View Results",
             sidebarLayout(
-                # tab 2 sidebar panel
+                # filter results sidebar panel
                 sidebarPanel(
-                       h4("Filter Dataset"),
+                       h4("Filter Results"),
                        sliderInput("pvalue_threshold",
                                    "Set significance threshold",
                                    min = 0,
@@ -99,7 +99,7 @@ ui <- fluidPage(
                                    min = 0,
                                    max = 10,
                                    value = 2,
-                                   step = .5),
+                                   step = .1),
                        checkboxInput("fdr",
                                      "Use adjusted P-value (False Discovery Rate)",
                                      TRUE),
@@ -109,71 +109,36 @@ ui <- fluidPage(
                        checkboxInput("de_filter",
                                      "Filter table to only show differentially expressed genes",
                                      FALSE),
-                       br(),
-                       downloadButton("download_de_res",
-                                      "Download Results Table"),
-                       br(),
-                       br(),
-                       em("Results table will download exactly as it is displayed")),
+                       br()),
                 # tab 2 main panel
-                mainPanel(
-                    h4("Differential Expression Results Table"),
-                    dataTableOutput("de_res_table"))
-                ) # end tab 2 sidebar layout
-        ), # end tabpanel 2
-        
-        # ma plot tab -----
-        tabPanel("MA Plot",
-                 sidebarLayout(
-                     sidebarPanel(
-                         h4("Customize Plot"),
-                         textInput("ma_x_label",
-                                   "X axis label:",
-                                   value = "Mean of normalized counts"),
-                         textInput("ma_y_label",
-                                   "Y axis label:",
-                                   value = "Log fold change"),
-                         textInput("ma_legend_title",
-                                   "Legend title:",
-                                   value = "Differentially expressed")),
-                     mainPanel(
-                         plotOutput("ma_plot"),
-                         downloadButton("download_ma",
-                                        "Download MA Plot")))
-                 ), # end tab 3
-        
-        # volcano plot tab -----
-        tabPanel("Volcano Plot",
-                 sidebarLayout(
-                     sidebarPanel(
-                         h4("Customize Plot"),
-                         textInput("volcano_x_label",
-                                   "X axis label:",
-                                   value = "Log fold change"),
-                         textInput("volcano_y_label",
-                                   "Y axis label:",
-                                   value = "Significance (-log10)"),
-                         textInput("volcano_legend_title",
-                                   "Legend title:",
-                                   value = "Differentially expressed")),
-                     mainPanel(
-                         plotOutput("volcano_plot"),
-                         downloadButton("download_volcano",
-                                        "Download Volcano Plot")))
-        ), # end tab 4
-        
-        # heatmap tab -----
-        tabPanel("Heatmap of DE Genes",
-                 sidebarLayout(
-                     sidebarPanel(),
-                     mainPanel(
-                         plotOutput("de_heatmap",
-                                    height = "2500px"),
-                         downloadButton("download_heatmap",
-                                        "Download Heatmap")
-                     )))
+                mainPanel(tabsetPanel(
+                    # de results subtab -----
+                    tabPanel("Differential Expression Results Table",
+                             dataTableOutput("de_res_table"),
+                             br(),
+                             downloadButton("download_de_res",
+                                            "Download Results Table"),
+                             br(),
+                             br(),
+                             em("Results table will download exactly as it is displayed")),
+                    tabPanel("MA Plot",
+                             plotOutput("ma_plot"),
+                             downloadButton("download_ma",
+                                            "Download MA Plot")),
+                    tabPanel("Volcano Plot",
+                             plotOutput("volcano_plot"),
+                             downloadButton("download_volcano",
+                                            "Download Volcano Plot")),
+                    tabPanel("Heatmap of DE Genes",
+                             plotOutput("de_heatmap",
+                                        height = "2500px"),
+                             downloadButton("download_heatmap",
+                                            "Download Heatmap"))
+                    ) # end tabset panel within mainpanel
+                ) # end mainPanel
+        ) # end sidebarlayout
         ) # end tabsetPanel
-    ) # end fluidPage
+    )) # end fluidPage
 
 # SERVER -----
 server <- function(input, output, session) {
