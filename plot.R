@@ -32,7 +32,8 @@ plotHeatmap <- function(counts,
            scale= "row", 
            border_color = NA, 
            annotation_col = sample_matrix,
-           silent = silent)
+           silent = silent,
+           cellheight = 15)
 }
 
 ## RESULTS VISUALIZATIONS #########################################################################
