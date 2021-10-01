@@ -187,9 +187,15 @@ formatResults <- function(de_res,
   # save col in results
   de_res$isDE <- de_idx
   
-  # if de_filter is TRUE, filter dataset
-  if (de_filter) {
+  # if de_filter is both, filter dataset by all DE
+  if (de_filter == "both") {
     de_res <- de_res[de_res$isDE, ]
+  } else if (de_filter == "up") {
+    de_res <- de_res[de_res$isDE, ]
+    de_res <- de_res[de_res[[logfc_col]] > 0,]
+  } else if (de_filter == "down") {
+    de_res <- de_res[de_res$isDE, ]
+    de_res <- de_res[de_res[[logfc_col]] < 0,]
   }
   
   # if de_column = FALSE, remove isDE column 
