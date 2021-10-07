@@ -179,13 +179,13 @@ ui <- fluidPage(
                                      column(1,
                                             offset = 1,
                                             br(),
-                                            numericInput("ma_plot_ht",
+                                            numericInput("ma_h",
                                                          "Height (in)",
                                                          value = 5,
                                                          width = "80px")),
                                      column(1,
                                             br(),
-                                            numericInput("ma_plot_w",
+                                            numericInput("ma_w",
                                                          "Width (in)",
                                                          value = 10,
                                                          width = "80px"))
@@ -229,13 +229,13 @@ ui <- fluidPage(
                                      column(1,
                                             offset = 1,
                                             br(),
-                                            numericInput("volcano_plot_ht",
+                                            numericInput("volcano_h",
                                                          "Height (in)",
                                                          value = 5,
                                                          width = "80px")),
                                      column(1,
                                             br(),
-                                            numericInput("volcano_plot_w",
+                                            numericInput("volcano_w",
                                                          "Width (in)",
                                                          value = 10,
                                                          width = "80px"))
@@ -269,7 +269,7 @@ ui <- fluidPage(
                                  column(1,
                                         offset = 1,
                                         br(),
-                                        numericInput("heatamp_h",
+                                        numericInput("heatmap_h",
                                                      "Height (in)",
                                                      value = 10,
                                                      width = "80px")),
@@ -342,6 +342,9 @@ server <- function(input, output, session) {
                de_package = input$de_package)
     })
     
+    # update reactive values (fdr) -----
+    # observe on checkbox click (fdr), colnames based on selected de_package 
+    # update all cols on apply button click
     observeEvent(input$apply, {
         if (input$de_package == "DESeq2") {
             col_names$mean_counts_col <- "baseMean"
@@ -354,8 +357,7 @@ server <- function(input, output, session) {
         }
     })
     
-    # update reactive values (fdr) -----
-    # observe on checkbox click (fdr), colnames based on selected de_package 
+    # update pvalue col on fdr checkbox click
     observeEvent(input$fdr, {
         if (input$de_package == "DESeq2") {
             col_names$pvalue_col <- ifelse(input$fdr, "padj", "pvalue")
@@ -502,7 +504,7 @@ server <- function(input, output, session) {
         },
         
         content = function(file) {
-            ggsave(file, ma(), device = "pdf", width = input$ma_plot_w, height = input$ma_plot_ht, units = "in")
+            ggsave(file, ma(), device = "pdf", width = input$ma_w, height = input$ma_h, units = "in")
         })
     
     output$download_volcano <- downloadHandler(
@@ -511,7 +513,7 @@ server <- function(input, output, session) {
         },
         
         content = function(file) {
-            ggsave(file, volcano(), device = "pdf", width = input$volcano_plot_w, height = volcano_plot_ht, units = "in")
+            ggsave(file, volcano(), device = "pdf", width = input$volcano_w, height = input$volcano_h, units = "in")
         })
     
     output$download_heatmap <- downloadHandler(
