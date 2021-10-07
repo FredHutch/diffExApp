@@ -58,8 +58,8 @@ resultsToMa <- function(de_res,
   
   # if package is DESeq log10 the base mean axis
   # check for basemean col
-  basemean_present <- "baseMean" %in% names(de_res)
-  if (basemean_present) {
+  deseq <- "baseMean" %in% names(de_res)
+  if (deseq) {
     ma <- ma +
       scale_x_log10()
   }
