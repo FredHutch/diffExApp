@@ -20,7 +20,7 @@ createSampleMatrix <- function(condition1_name,
 }
 
 # subset dataset and makes sure it matches sample matrix
-prepDataset <- function(datdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddda,
+prepDataset <- function(data,
                         sample_matrix,
                         gene_col) {
   # make gene_col row names of data
