@@ -2,8 +2,8 @@
 # data <- read.table("~/Documents/work/dataCore/shiny/diffEx/data/counts.csv", sep = ",", header = TRUE)
 # condition1_name <- "wt"
 # condition2_name <- "trt"
-# condition1_selected <- c("SRR1039508", "SRR1039509", "SRR1039512")
-# condition2_selected <- c("SRR1039521", "SRR1039520", "SRR1039517")
+# condition1_selected <- c("SRR1039508", "SRR1039509")
+# condition2_selected <- c( "SRR1039512", "SRR1039513")
 # gene_col <- "gene"
 # de_package <- "edgeR"
 # fdr <- TRUE
@@ -119,11 +119,13 @@ ui <- fluidPage(
                                      column(2,
                                             br(),
                                             checkboxInput("de_column",
-                                                          "Show isDE column")),
+                                                          "Show isDE column",
+                                                          value = FALSE)),
                                      column(2,
                                             br(),
                                             checkboxInput("de_subset",
-                                                          "Only show DE genes"))),
+                                                          "Only show DE genes",
+                                                          value = FALSE))),
                                  hr(),
                                  # customization
                                  fluidRow(h4("Download")),
@@ -331,15 +333,6 @@ server <- function(input, output, session) {
     # update stored column names based on de_package selected
     # run differential expression
     de_out <- eventReactive(input$apply, {
-        
-        if (input$de_package == "DESeq2") {
-            col_names$mean_counts_col <- "baseMean"
-            col_names$logfc_col <- "log2FoldChange"
-        } else if (input$de_package == "edgeR") {
-            col_names$mean_counts_col <- "logCPM"
-            col_names$logfc_col <- "logFC"
-        }
-        
         diffEx(data = data,
                condition1_name = input$condition1_name,
                condition2_name = input$condition2_name,
@@ -349,12 +342,24 @@ server <- function(input, output, session) {
                de_package = input$de_package)
     })
     
+    observeEvent(input$apply, {
+        if (input$de_package == "DESeq2") {
+            col_names$mean_counts_col <- "baseMean"
+            col_names$logfc_col <- "log2FoldChange"
+            col_names$pvalue_col <- ifelse(input$fdr, "padj", "pvalue")
+        } else if (input$de_package == "edgeR") {
+            col_names$mean_counts_col <- "logCPM"
+            col_names$logfc_col <- "logFC"
+            col_names$pvalue_col <- ifelse(input$fdr, "FDR", "PValue")
+        }
+    })
+    
     # update reactive values (fdr) -----
     # observe on checkbox click (fdr), colnames based on selected de_package 
     observeEvent(input$fdr, {
         if (input$de_package == "DESeq2") {
             col_names$pvalue_col <- ifelse(input$fdr, "padj", "pvalue")
-        } else {
+        } else if (input$de_package == "edgeR") {
             col_names$pvalue_col <- ifelse(input$fdr, "FDR", "PValue")
         }
     })
@@ -393,7 +398,6 @@ server <- function(input, output, session) {
     
     # format results for plotting -----
     # plots cannot use data that is filtered by user selection and require the de_column!
-    # FIXME: maybe there is a more streamlined way to do this?
     formatted_res_plots <- reactive({
         formatResults(de_res = req(de_res()),
                       logfc_threshold = input$logfc_threshold,
