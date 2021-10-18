@@ -145,9 +145,9 @@ getCounts <- function(de_out,
     counts <- counts(de_out, normalized = normalized)
     } else if (de_package == "edgeR") {
       if (normalized) {
-      counts <- de_out$normalizedCounts
+      counts <- data.frame(de_out$normalizedCounts)
       } else {
-      counts <- de_out$counts
+      counts <- data.frame(de_out$counts)
       }}
   
   return(counts)
@@ -174,21 +174,37 @@ formatResults <- function(de_res,
                           logfc_col,
                           pvalue_col,
                           de_column,
-                          de_filter) {
+                          de_filter,
+                          subset) {
   
   # create index of de genes
   de_idx <- abs(de_res[[logfc_col]]) >= logfc_threshold & de_res[[pvalue_col]] <= pvalue_threshold
-
+  
   # DESEQ for some reasons turns pval/padj to NA, this messes up the de_idx (NA instead of T/F)
   # https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#pvaluesNA
   # change NA to FALSE in de_idx so these cases are dropped
   de_idx[is.na(de_idx)] = FALSE
   
-  # save col in results
-  de_res$isDE <- de_idx
-  
-  # if de_filter is TRUE, filter dataset
-  if (de_filter) {
+  if (de_filter == "both") {
+    # save col in results
+    de_res$isDE <- de_idx
+  } else if (de_filter == "up") {
+    # find up values
+    up_idx <- de_res[[logfc_col]] >= 0
+    # calc where both vectors == TRUE
+    up_de_idx <- rowSums(data.frame(de_idx, up_idx)) == 2
+    # save col in results
+    de_res$isDE <- up_de_idx
+  } else if (de_filter == "down") {
+    # find up values
+    dn_idx <- de_res[[logfc_col]] <= 0
+    # calc where both vectors == TRUE
+    dn_de_idx <- rowSums(data.frame(de_idx, dn_idx)) == 2
+    # save col in results
+    de_res$isDE <- dn_de_idx
+    }
+
+  if (subset) {
     de_res <- de_res[de_res$isDE, ]
   }
   

@@ -23,7 +23,8 @@ plotPca <- function(counts,
 plotHeatmap <- function(counts,
                         sample_matrix,
                         de_vec,
-                        silent = TRUE) {
+                        row_names,
+                        col_names) {
   # subset de genes only
   de_counts <- counts[de_vec, ]
   
@@ -32,8 +33,9 @@ plotHeatmap <- function(counts,
            scale= "row", 
            border_color = NA, 
            annotation_col = sample_matrix,
-           silent = silent,
-           cellheight = 15)
+           cellheight = 15,
+           show_rownames = row_names,
+           show_colnames = col_names)
 }
 
 ## RESULTS VISUALIZATIONS #########################################################################
@@ -56,8 +58,8 @@ resultsToMa <- function(de_res,
   
   # if package is DESeq log10 the base mean axis
   # check for basemean col
-  basemean_present <- "baseMean" %in% names(de_res)
-  if (basemean_present) {
+  deseq <- "baseMean" %in% names(de_res)
+  if (deseq) {
     ma <- ma +
       scale_x_log10()
   }
