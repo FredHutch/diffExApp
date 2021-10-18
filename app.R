@@ -1,6 +1,7 @@
 # SET UP -----
 # load libraries
 library(shiny)
+library(DT)
 library(DESeq2)
 library(edgeR)
 library(tidyverse)
@@ -400,7 +401,7 @@ server <- function(input, output, session) {
     # format results based on user inputs -----
     # this is specifically for the downloadable results table
     formatted_res_render <- reactive({
-        formatResults(de_res = req(de_res()),
+        formatResults(de_res = de_res(),
                       logfc_threshold = input$logfc_threshold,
                       pvalue_threshold = input$pvalue_threshold,
                       logfc_col = col_names$logfc_col,
@@ -413,7 +414,7 @@ server <- function(input, output, session) {
     # render results table
     # will re-render baesd on user selections
     output$de_res_table <- renderDataTable(
-        DT::datatable(formatted_res_render(), options = list(pageLength = 20))
+      datatable(formatted_res_render(), options = list(pageLength = 20))
     )
     
     # format results for plotting -----
