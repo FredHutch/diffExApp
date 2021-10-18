@@ -1,34 +1,52 @@
-# save variables
-# data <- read.table("~/Documents/work/dataCore/shiny/diffEx/data/counts.csv", sep = ",", header = TRUE)
-# condition1_name <- "wt"
-# condition2_name <- "trt"
-# condition1_selected <- c("SRR1039508", "SRR1039509", "SRR1039512")
-# condition2_selected <- c("SRR1039521", "SRR1039520", "SRR1039517")
-# gene_col <- "gene"
-# de_package <- "DESeq2"
-# fdr <- TRUE
-# pvalue_threshold <- .01
-# logfc_threshold <- 2
-
 # SET UP -----
 # load libraries
 library(shiny)
 library(DESeq2)
 library(edgeR)
 library(tidyverse)
-library(DT)
 library(scales)
 library(pheatmap)
 
-# source scripts
-source("./diffEx.R")
-source("./plot.R")
-source("https://raw.githubusercontent.com/FredHutch/interactiveVolcano/master/volcano.R")
+# source scripts / read in data
+local <- TRUE
 
-# read in data
-data <- read.table("~/Documents/work/dataCore/shiny/diffEx/data/counts.csv", sep = ",", header = TRUE)
+if (local) {
+    source("R/diffEx.R")
+    source("R/plot.R")
+    source("../volcano/volcano.R")
+    
+    tsv <- list.files("data/", pattern = ".tsv", full.names = TRUE)
+    csv <- list.files("data/", pattern = ".csv", full.names = TRUE)
+    txt <- list.files("data/", pattern = ".txt", full.names = TRUE)
+} else {
+    source("/apps/diffEx/diffEx.R")
+    source("/apps/diffEx/plot.R")
+    source("/apps/volcano/volcano.R")
+    
+    tsv <- list.files("/work", pattern = ".tsv", full.names = TRUE)
+    csv <- list.files("/work", pattern = ".csv", full.names = TRUE)
+    txt <- list.files("/work", pattern = ".txt", full.names = TRUE)
+}
 
-# check cols
+
+# read in data -----
+
+
+if(length(tsv) > 0) {
+  data <- read.table(tsv, header = TRUE, sep = "\t")
+}
+
+if(length(csv) > 0) {
+  data <- read.table(csv, header = TRUE, sep = ",")
+}
+
+if(length(txt) > 0) {
+  data <- fread(txt)
+}
+
+data <- as.data.frame(data)
+
+# col checking fxns -----
 counts_candidate_f <- function(x) {
     if (is.numeric(data[[x]])) {
         return(TRUE)}
