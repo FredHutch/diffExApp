@@ -8,7 +8,7 @@ library(scales)
 library(pheatmap)
 
 # source scripts / read in data
-local <- TRUE
+local <- FALSE
 
 if (local) {
     source("R/diffEx.R")
