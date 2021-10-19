@@ -2,6 +2,10 @@
 
 _An interactive application for differential expression analysis._
 
+This app takes a single file (`.csv`, `.tsv`, or `.txt`). The file should contain columns of raw gene counts data with a single row of Gene ID's (ID can be in any form). Once running the user can select replicates and run a simple pairwise gene expression analysis using either [EdgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html) or [DESeq2](https://bioconductor.org/packages/release/bioc/html/DESeq2.html).
+
+> Curious what exactly is happening under the hood? Check out the differential expression code [here](https://github.com/FredHutch/diffExApp/blob/master/R/diffEx.R). The functions `edgerDE()` and `deseqDE()` handle the bulk of the analysis.
+
 ## Set up
 
 - This app is set up to run in a specific Docker environment. Most likely you'll be running this application locally so you'll have to make some changes to `app.R`. To switch the application to local, open `app.R` and switch `local <- TRUE`.
@@ -17,3 +21,7 @@ Once the application is running, it opens to a tab where you can select replicat
 The results are on the next tab. On the left hand sidebar, there are thresholds for significance and effect size to determine what is considered differentially expressed. You can view the differential expression results table, an MA plot, a volcano plot, and a clustered heatmap of differentially expressed genes by clicking the tabs on the right hand side. Below each results table or plot there are options for further customization and a download button for that specific result.
 
 ![screenshot of results tab](/assets/diffex_screenshot_2.png?raw=true)
+
+## What to expect going forward
+
+Currently this app runs a very simplified gene expression analysis. We're working to bring more complex analyses to this shiny app, stay tuned!
