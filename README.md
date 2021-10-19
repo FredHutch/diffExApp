@@ -12,8 +12,8 @@ _An interactive application for differential expression analysis._
 
 Once the application is running, it opens to a tab where you can select replicates and decide on an analysis package (either edgeR or DESeq2). Once everything is set, click the `apply` button and the differential expression analysis will run. You'll see a PCA plot appear underneath the sample table when your results are ready.
 
-![screenshot of run analysis tab](/assets/diffex_screenshot_1.png)
+![screenshot of run analysis tab](assets/diffex_screenshot_1.png)
 
 The results are on the next tab. On the left hand sidebar, there are thresholds for significance and effect size to determine what is considered differentially expressed. You can view the differential expression results table, an MA plot, a volcano plot, and a clustered heatmap of differentially expressed genes by clicking the tabs on the right hand side. Below each results table or plot there are options for further customization and a download button for that specific result.
 
-![screenshot of results tab](/assets/diffex_screenshot_2.png)
+![screenshot of results tab](assets/diffex_screenshot_2.png)
