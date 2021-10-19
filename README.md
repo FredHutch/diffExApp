@@ -6,6 +6,26 @@ This app takes a single file (`.csv`, `.tsv`, or `.txt`). The file should contai
 
 > Curious what exactly is happening under the hood? Check out the differential expression code [here](https://github.com/FredHutch/diffExApp/blob/master/R/diffEx.R). The functions `edgerDE()` and `deseqDE()` handle the bulk of the analysis.
 
+## Installation
+
+The easiest way to install this application is to clone it from this GitHub. Open the command line (terminal on Mac) and type the following commands:
+
+Go to the directory that you want to download the app to.
+```
+cd <PATH/TO/DIR>
+```
+
+Clone this repository
+```
+git clone https://github.com/FredHutch/interactiveVolcano.git
+```
+
+Enter the repository and switch to the local branch
+```
+cd interactiveVolcano
+git checkout local
+```
+
 ## Set up
 
 - This app is set up to run in a specific Docker environment. Most likely you'll be running this application locally so you'll have to make a quick change to `app.R`. To switch the application to local, open `app.R` and switch `local <- TRUE`.
