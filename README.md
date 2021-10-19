@@ -23,7 +23,6 @@ git clone https://github.com/FredHutch/interactiveVolcano.git
 Enter the repository and switch to the local branch
 ```
 cd interactiveVolcano
-git checkout local
 ```
 
 ## Set up
