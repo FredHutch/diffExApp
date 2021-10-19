@@ -8,9 +8,11 @@ This app takes a single file (`.csv`, `.tsv`, or `.txt`). The file should contai
 
 ## Set up
 
-- This app is set up to run in a specific Docker environment. Most likely you'll be running this application locally so you'll have to make some changes to `app.R`. To switch the application to local, open `app.R` and switch `local <- TRUE`.
+- This app is set up to run in a specific Docker environment. Most likely you'll be running this application locally so you'll have to make a quick change to `app.R`. To switch the application to local, open `app.R` and switch `local <- TRUE`.
 - You can now run the app with it's example dataset. A `.csv` derived from the [airway](https://bioconductor.org/packages/release/data/experiment/html/airway.html) dataset.
     - To run the app either click `run app` in the right corner of the RStudio source pane when you have `app.R` open or by running `R -e "shiny::runApp('~/path/to/shinyapp')"` on the command line.
+- Once you've checked that the app runs with the example data, use you're own dataset by replacing the example data with any counts data of your own!
+    - If you want a place to archive data files you can create a directory called `archive` in `data/` and keep data files there without disrupting the app. 
 
 ## Usage
 
